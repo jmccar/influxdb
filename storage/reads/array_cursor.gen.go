@@ -254,10 +254,10 @@ WINDOWS:
 	for {
 		firstTimestamp := a.Timestamps[rowIdx]
 		windowStart := firstTimestamp - firstTimestamp%c.every
-		windowEnd := windowStart + c.every
 		if windowStart < c.tr.Start {
 			windowStart = c.tr.Start
 		}
+		windowEnd := windowStart + c.every
 		if windowEnd > c.tr.End {
 			windowEnd = c.tr.End
 		}
