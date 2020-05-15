@@ -52,7 +52,7 @@ func (r *windowAggregateResultSet) Close() {}
 func (r *windowAggregateResultSet) Err() error { return nil }
 
 func (r *windowAggregateResultSet) Stats() cursors.CursorStats {
-	if r.seriesRow.Query == nil {
+	if r.seriesRow == nil || r.seriesRow.Query == nil {
 		return cursors.CursorStats{}
 	}
 	return r.seriesRow.Query.Stats()
