@@ -2,6 +2,7 @@ package influxdb
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/influxdata/flux"
 	"github.com/influxdata/flux/ast"
@@ -667,6 +668,7 @@ func (rule PushDownWindowAggregateRule) Pattern() plan.Pattern {
 }
 
 func (PushDownWindowAggregateRule) Rewrite(ctx context.Context, pn plan.Node) (plan.Node, bool, error) {
+	fmt.Print("Matched PushDownWindowAggregateRule")
 	// Check Capabilities
 	reader := GetStorageDependencies(ctx).FromDeps.Reader
 	windowAggregateReader, ok := reader.(query.WindowAggregateReader)
@@ -757,6 +759,7 @@ func (PushDownWindowAggregateRule) Rewrite(ctx context.Context, pn plan.Node) (p
 		return pn, false, nil
 	}
 
+	fmt.Print("WindowAggregate pushed down")
 	// Rule passes.
 	return plan.CreatePhysicalNode("ReadWindowAggregate", &ReadWindowAggregatePhysSpec{
 		ReadRangePhysSpec: *fromSpec.Copy().(*ReadRangePhysSpec),
