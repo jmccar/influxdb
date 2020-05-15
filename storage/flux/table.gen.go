@@ -100,12 +100,14 @@ func (t *floatTable) advance() bool {
 // window table
 type floatWindowTable struct {
 	floatTable
+	windowEvery int64
 }
 
 func newFloatWindowTable(
 	done chan struct{},
 	cur cursors.FloatArrayCursor,
 	bounds execute.Bounds,
+	every int64,
 	key flux.GroupKey,
 	cols []flux.ColMeta,
 	tags models.Tags,
@@ -118,6 +120,7 @@ func newFloatWindowTable(
 			table: newTable(done, bounds, key, cols, defs, cache, alloc),
 			cur:   cur,
 		},
+		windowEvery: every,
 	}
 	t.readTags(tags)
 	t.advance()
@@ -138,10 +141,13 @@ func (t *floatWindowTable) advance() bool {
 	// allocate a new buffer.
 	cr := t.allocateBuffer(l)
 	// regain the window start time from the window end time
+	rangeStart := int64(t.bounds.Start)
 	startTimes := make([]int64, len(a.Timestamps))
-	startTimes[0] = int64(t.bounds.Start)
-	for i := 1; i < len(a.Timestamps); i++ {
-		startTimes[i] = a.Timestamps[i-1]
+	for i := 0; i < a.Len(); i++ {
+		startTimes[i] = a.Timestamps[i] - t.windowEvery
+	}
+	if startTimes[0] < rangeStart {
+		startTimes[0] = rangeStart
 	}
 	cr.cols[startColIdx] = arrow.NewInt(startTimes, t.alloc)
 	cr.cols[stopColIdx] = arrow.NewInt(a.Timestamps, t.alloc)
@@ -344,12 +350,14 @@ func (t *integerTable) advance() bool {
 // window table
 type integerWindowTable struct {
 	integerTable
+	windowEvery int64
 }
 
 func newIntegerWindowTable(
 	done chan struct{},
 	cur cursors.IntegerArrayCursor,
 	bounds execute.Bounds,
+	every int64,
 	key flux.GroupKey,
 	cols []flux.ColMeta,
 	tags models.Tags,
@@ -362,6 +370,7 @@ func newIntegerWindowTable(
 			table: newTable(done, bounds, key, cols, defs, cache, alloc),
 			cur:   cur,
 		},
+		windowEvery: every,
 	}
 	t.readTags(tags)
 	t.advance()
@@ -382,10 +391,13 @@ func (t *integerWindowTable) advance() bool {
 	// allocate a new buffer.
 	cr := t.allocateBuffer(l)
 	// regain the window start time from the window end time
+	rangeStart := int64(t.bounds.Start)
 	startTimes := make([]int64, len(a.Timestamps))
-	startTimes[0] = int64(t.bounds.Start)
-	for i := 1; i < len(a.Timestamps); i++ {
-		startTimes[i] = a.Timestamps[i-1]
+	for i := 0; i < a.Len(); i++ {
+		startTimes[i] = a.Timestamps[i] - t.windowEvery
+	}
+	if startTimes[0] < rangeStart {
+		startTimes[0] = rangeStart
 	}
 	cr.cols[startColIdx] = arrow.NewInt(startTimes, t.alloc)
 	cr.cols[stopColIdx] = arrow.NewInt(a.Timestamps, t.alloc)
@@ -588,12 +600,14 @@ func (t *unsignedTable) advance() bool {
 // window table
 type unsignedWindowTable struct {
 	unsignedTable
+	windowEvery int64
 }
 
 func newUnsignedWindowTable(
 	done chan struct{},
 	cur cursors.UnsignedArrayCursor,
 	bounds execute.Bounds,
+	every int64,
 	key flux.GroupKey,
 	cols []flux.ColMeta,
 	tags models.Tags,
@@ -606,6 +620,7 @@ func newUnsignedWindowTable(
 			table: newTable(done, bounds, key, cols, defs, cache, alloc),
 			cur:   cur,
 		},
+		windowEvery: every,
 	}
 	t.readTags(tags)
 	t.advance()
@@ -626,10 +641,13 @@ func (t *unsignedWindowTable) advance() bool {
 	// allocate a new buffer.
 	cr := t.allocateBuffer(l)
 	// regain the window start time from the window end time
+	rangeStart := int64(t.bounds.Start)
 	startTimes := make([]int64, len(a.Timestamps))
-	startTimes[0] = int64(t.bounds.Start)
-	for i := 1; i < len(a.Timestamps); i++ {
-		startTimes[i] = a.Timestamps[i-1]
+	for i := 0; i < a.Len(); i++ {
+		startTimes[i] = a.Timestamps[i] - t.windowEvery
+	}
+	if startTimes[0] < rangeStart {
+		startTimes[0] = rangeStart
 	}
 	cr.cols[startColIdx] = arrow.NewInt(startTimes, t.alloc)
 	cr.cols[stopColIdx] = arrow.NewInt(a.Timestamps, t.alloc)
@@ -832,12 +850,14 @@ func (t *stringTable) advance() bool {
 // window table
 type stringWindowTable struct {
 	stringTable
+	windowEvery int64
 }
 
 func newStringWindowTable(
 	done chan struct{},
 	cur cursors.StringArrayCursor,
 	bounds execute.Bounds,
+	every int64,
 	key flux.GroupKey,
 	cols []flux.ColMeta,
 	tags models.Tags,
@@ -850,6 +870,7 @@ func newStringWindowTable(
 			table: newTable(done, bounds, key, cols, defs, cache, alloc),
 			cur:   cur,
 		},
+		windowEvery: every,
 	}
 	t.readTags(tags)
 	t.advance()
@@ -870,10 +891,13 @@ func (t *stringWindowTable) advance() bool {
 	// allocate a new buffer.
 	cr := t.allocateBuffer(l)
 	// regain the window start time from the window end time
+	rangeStart := int64(t.bounds.Start)
 	startTimes := make([]int64, len(a.Timestamps))
-	startTimes[0] = int64(t.bounds.Start)
-	for i := 1; i < len(a.Timestamps); i++ {
-		startTimes[i] = a.Timestamps[i-1]
+	for i := 0; i < a.Len(); i++ {
+		startTimes[i] = a.Timestamps[i] - t.windowEvery
+	}
+	if startTimes[0] < rangeStart {
+		startTimes[0] = rangeStart
 	}
 	cr.cols[startColIdx] = arrow.NewInt(startTimes, t.alloc)
 	cr.cols[stopColIdx] = arrow.NewInt(a.Timestamps, t.alloc)
@@ -1076,12 +1100,14 @@ func (t *booleanTable) advance() bool {
 // window table
 type booleanWindowTable struct {
 	booleanTable
+	windowEvery int64
 }
 
 func newBooleanWindowTable(
 	done chan struct{},
 	cur cursors.BooleanArrayCursor,
 	bounds execute.Bounds,
+	every int64,
 	key flux.GroupKey,
 	cols []flux.ColMeta,
 	tags models.Tags,
@@ -1094,6 +1120,7 @@ func newBooleanWindowTable(
 			table: newTable(done, bounds, key, cols, defs, cache, alloc),
 			cur:   cur,
 		},
+		windowEvery: every,
 	}
 	t.readTags(tags)
 	t.advance()
@@ -1114,10 +1141,13 @@ func (t *booleanWindowTable) advance() bool {
 	// allocate a new buffer.
 	cr := t.allocateBuffer(l)
 	// regain the window start time from the window end time
+	rangeStart := int64(t.bounds.Start)
 	startTimes := make([]int64, len(a.Timestamps))
-	startTimes[0] = int64(t.bounds.Start)
-	for i := 1; i < len(a.Timestamps); i++ {
-		startTimes[i] = a.Timestamps[i-1]
+	for i := 0; i < a.Len(); i++ {
+		startTimes[i] = a.Timestamps[i] - t.windowEvery
+	}
+	if startTimes[0] < rangeStart {
+		startTimes[0] = rangeStart
 	}
 	cr.cols[startColIdx] = arrow.NewInt(startTimes, t.alloc)
 	cr.cols[stopColIdx] = arrow.NewInt(a.Timestamps, t.alloc)
