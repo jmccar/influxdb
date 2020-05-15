@@ -2,7 +2,6 @@ package influxdb
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/influxdata/flux"
 	"github.com/influxdata/flux/ast"
@@ -758,7 +757,6 @@ func (PushDownWindowAggregateRule) Rewrite(ctx context.Context, pn plan.Node) (p
 		return pn, false, nil
 	}
 
-	fmt.Println("WindowAggregate pushed down")
 	// Rule passes.
 	return plan.CreatePhysicalNode("ReadWindowAggregate", &ReadWindowAggregatePhysSpec{
 		ReadRangePhysSpec: *fromSpec.Copy().(*ReadRangePhysSpec),
