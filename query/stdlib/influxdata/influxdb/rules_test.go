@@ -2,6 +2,7 @@ package influxdb_test
 
 import (
 	"context"
+	"math"
 	"testing"
 	"time"
 
@@ -1561,6 +1562,116 @@ func TestPushDownWindowAggregateRule(t *testing.T) {
 	})
 
 	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+			plantest.PhysicalRuleTestHelper(t, &tc)
+		})
+	}
+}
+
+func TestPushDownBareAggregateRule(t *testing.T) {
+	// Turn on support for window aggregate count
+	flagger := mock.NewFlagger(map[feature.Flag] interface{}{
+		feature.PushDownWindowAggregateCount(): true,
+	})
+
+	withFlagger, _ := feature.Annotate(context.Background(), flagger)
+
+	// Construct dependencies either with or without aggregate window caps.
+	deps := func(have bool) influxdb.StorageDependencies {
+		return influxdb.StorageDependencies{
+			FromDeps: influxdb.FromDependencies{
+				Reader:  mockReaderCaps{ Have: have },
+				Metrics: influxdb.NewMetrics(nil),
+			},
+		}
+	}
+
+	haveCaps := deps(true).Inject(withFlagger)
+	noCaps := deps(false).Inject(withFlagger)
+
+	readRange := &influxdb.ReadRangePhysSpec{
+		Bucket: "my-bucket",
+		Bounds: flux.Bounds{
+			Start: fluxTime(5),
+			Stop:  fluxTime(10),
+		},
+	}
+
+	readWindowAggregate := &influxdb.ReadWindowAggregatePhysSpec{
+		ReadRangePhysSpec: *(readRange.Copy().(*influxdb.ReadRangePhysSpec)),
+		WindowEvery: math.MaxInt64,
+		Aggregates: []plan.ProcedureKind{universe.CountKind},
+	}
+
+	minProcedureSpec := func() *universe.MinProcedureSpec {
+		return &universe.MinProcedureSpec{
+			SelectorConfig: execute.SelectorConfig{Column: "_value"},
+		}
+	}
+	countProcedureSpec := func() *universe.CountProcedureSpec {
+		return &universe.CountProcedureSpec{
+			AggregateConfig: execute.AggregateConfig{Columns: []string{"_value"}},
+		}
+	}
+
+	testcases := []plantest.RuleTestCase{
+		{
+			// successful push down
+			Context: haveCaps,
+			Name: "push down count",
+			Rules: []plan.Rule{influxdb.PushDownBareAggregateRule{}},
+			Before: &plantest.PlanSpec{
+				Nodes: []plan.Node{
+					plan.CreatePhysicalNode("ReadRange", readRange),
+					plan.CreatePhysicalNode("count", countProcedureSpec()),
+				},
+				Edges: [][2]int{
+					{0, 1},
+				},
+			},
+			After: &plantest.PlanSpec{
+				Nodes: []plan.Node{
+					plan.CreatePhysicalNode("ReadWindowAggregate", readWindowAggregate),
+				},
+			},
+		},
+		{
+			// capability not provided in storage layer
+			Context: noCaps,
+			Name: "no caps",
+			Rules: []plan.Rule{influxdb.PushDownBareAggregateRule{}},
+			Before: &plantest.PlanSpec{
+				Nodes: []plan.Node{
+					plan.CreatePhysicalNode("ReadRange", readRange),
+					plan.CreatePhysicalNode("count", countProcedureSpec()),
+				},
+				Edges: [][2]int{
+					{0, 1},
+				},
+			},
+			NoChange: true,
+		},
+		{
+			// unsupported aggregate
+			Context: haveCaps,
+			Name: "no push down min",
+			Rules: []plan.Rule{influxdb.PushDownBareAggregateRule{}},
+			Before: &plantest.PlanSpec{
+				Nodes: []plan.Node{
+					plan.CreatePhysicalNode("ReadRange", readRange),
+					plan.CreatePhysicalNode("count", minProcedureSpec()),
+				},
+				Edges: [][2]int{
+					{0, 1},
+				},
+			},
+			NoChange: true,
+		},
+	}
+
+	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
