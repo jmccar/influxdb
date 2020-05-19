@@ -596,27 +596,17 @@ func (h *Handler) serveQuery(w http.ResponseWriter, r *http.Request, user meta.U
 	var closing chan struct{}
 	if !async {
 		closing = make(chan struct{})
-		if notifier, ok := w.(http.CloseNotifier); ok {
-			// CloseNotify() is not guaranteed to send a notification when the query
-			// is closed. Use this channel to signal that the query is finished to
-			// prevent lingering goroutines that may be stuck.
-			done := make(chan struct{})
-			defer close(done)
-
-			notify := notifier.CloseNotify()
-			go func() {
-				// Wait for either the request to finish
-				// or for the client to disconnect
-				select {
-				case <-done:
-				case <-notify:
-					close(closing)
-				}
-			}()
-			opts.AbortCh = done
-		} else {
-			defer close(closing)
-		}
+		go func() {
+			// Wait for either the request to finish
+			// or for the client to disconnect
+			select {
+			case <-r.Context.Done():
+			case <-done:
+			case <-notify:
+				close(closing)
+			}
+		}()
+		opts.AbortCh = done
 	}
 
 	// Execute query.
